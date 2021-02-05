@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Album Details</title>
+    <link rel="stylesheet" href="../node_modules/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="columns">
+        <div class="column col-10">
+          <h1 class="text-center" id="albumName"></h1>
+          <button id="uploadSongBtn" type="button" class="btn">
+            Add song(s)
+          </button>
+          <button id="deleteAlbumBtn" type="button" class="btn">
+            Delete album
+          </button>
+          <ul id="songList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <script src="./album.js"></script>
+  </body>
+
+</html>
