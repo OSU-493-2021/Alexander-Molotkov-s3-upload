@@ -1,4 +1,5 @@
-Run instructions:  Clone repository  
+Run instructions:  
+Clone repository  
 Install npm modules  
 Use command 'npm start'  
  
