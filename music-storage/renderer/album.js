@@ -3,66 +3,68 @@
 const AWS = require('aws-sdk')
 
 const { ipcRenderer } = require('electron')
-var s3 = new AWS.S3()
+const request = require('request')
+
+var genre = ""
+var artist = ""
 
 // create add song window button
-document.getElementById('uploadSongBtn').addEventListener('click', () => {
-  ipcRenderer.send('add-song-window')
+document.getElementById('addSongBtn').addEventListener('click', () => {
+  var albumName = document.getElementById("albumName").innerText
+  ipcRenderer.send('add-song-window', genre, artist, albumName)
 })
 
 // create add song window button
 document.getElementById('deleteAlbumBtn').addEventListener('click', () => {
-  
-  var albumName = document.getElementById("albumName").innerHTML
-  ipcRenderer.send('delete-album', albumName)
-
+  var songName = document.getElementById("albumName").innerHTML
+  ipcRenderer.send('delete-song', albumName)
 })
 
-// Add event listener for album-name
-ipcRenderer.on("album-name", (event, albumName) => {
-
-  console.log("changing album name in album.js")
-
-  document.getElementById("albumName").innerHTML = albumName
+// Add event listener for song-name
+ipcRenderer.on("song-name", (event, albumName) => {
+  console.log("changing song name in album.js")
+  document.getElementById("songName").innerText = albumName
 })
 
 // on receive songs
-ipcRenderer.on('song', (event, songs) => {
+ipcRenderer.on('refresh-songs', () => {
 
-  // get the songList ul
+  console.log("Calling refresh songs")
+  var albumName = document.getElementById("artistName").innerText
   const songList = document.getElementById('songList')
-  var albumName = document.getElementById('albumName').innerText
-  albumName = albumName.substring(0, albumName.indexOf('\n'))
+  songList.innerHTML="";
 
-  console.log("Calling song in album.js")
-  const songPath = JSON.stringify(songs)
-  console.log(songPath)
+  request('https://oaysqwb5t8.execute-api.us-east-1.amazonaws.com/dev/songs/for/album?artist='+artistName, (error, response, body) => {
 
-  var songTitle = songPath.substring(songPath.lastIndexOf('\\') + 1, songPath.length -1)
-  console.log(songTitle)
+    if(error){
+      console.log(error);
+    }else{
 
-  songList.innerHTML = songList.innerHTML + "<li id='song" + songTitle + "' >" 
-  + songTitle + "<br></li>"
+      var songs = JSON.parse(body).Songs;
+      for(var i=0; i<songs.length; i++){
 
-  var data = {song: songPath.substring(0,songPath.length - 1), album: albumName}
-  ipcRenderer.send('upload-song', data)
+        // set list html to the song items
+        songList.innerHTML = songList.innerHTML + "<li id='album" + songs[i] + "' >" 
+        + songs[i] + "<br></li>"
+      }
+    }
+  });
+});
 
+// Add event listener for genre-name
+ipcRenderer.on("genre-name", (event, genreName) => {
+  console.log("Changing genre name in addAlbum.js to: " + genreName)
+  genre = genreName;
 })
 
-ipcRenderer.on('add-song', (event, song) => {
-
-  console.log("Calling add song")
-  const songList = document.getElementById('songList')
-  var shortSong = song.substring(song.lastIndexOf('/') + 1, song.length -1)
-  songList.innerHTML = songList.innerHTML + "<li id='song" + shortSong + "' >" 
-  + shortSong + "<br></li>"
-
+// Add event listener for artist-name
+ipcRenderer.on("artist-name", (event, artistName) => {
+  console.log("Changing genre name in addAlbum.js to: " + artistName)
+  artist = artistName;
 })
 
-ipcRenderer.on('get-album-name', function(event){
-
-  var albumName = document.getElementById("albumName").innerHTML
-  var albumText= albumName.replace(/"/g,"")
-  albumWindow.webContents.send('delete-album', albumText)
-
+// Add event listener for album
+ipcRenderer.on("album-name", (event, albumName) => {
+  console.log("Changing album name in addAlbum.js to: " + albumName)
+  document.getElementById("albumName").innerText = albumName;
 })

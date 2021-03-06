@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Add Genre</title>
+    <link rel="stylesheet" href="../node_modules/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="columns">
+        <div class="column col-10">
+          <h1 class="text-center">Add Genre</h1>
+
+          <form id="genreForm">
+            <div class="form-group">
+              <label class="form-label" for="add-input">Genre (each new genre must have at least one artist)</label>
+              <input class="form-input" type="text" name="add-input" placeholder="Genre name">
+              <input class="form-input" type="text" name="add-input" placeholder="Artist name">
+            </div>
+
+            <button class="btn">Add Genre</button>
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="./addGenre.js"></script>
+  </body>
+
+</html>

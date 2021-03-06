@@ -3,7 +3,7 @@
 
   <head>
     <meta charset="UTF-8">
-    <title>Music Library</title>
+    <title>Artist Details</title>
     <link rel="stylesheet" href="../node_modules/spectre.css/dist/spectre.min.css">
     <link rel="stylesheet" href="style.css">
   </head>
@@ -12,16 +12,19 @@
     <div class="container">
       <div class="columns">
         <div class="column col-10">
-          <h1 class="text-center">Genres</h1>
-          <button id="createGenreBtn" type="button" class="btn">
-            Create a new genre
+          <h1 class="text-center" id="artistName"></h1>
+          <button id="addAlbumBtn" type="button" class="btn">
+            Add album(s)
           </button>
-          <ul id="genreList"></ul>
+          <button id="deleteArtistBtn" type="button" class="btn">
+            Delete artist
+          </button>
+          <ul id="albumList"></ul>
         </div>
       </div>
     </div>
 
-    <script src="./index.js"></script>
+    <script src="./artist.js"></script>
   </body>
 
 </html>

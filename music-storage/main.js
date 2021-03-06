@@ -7,76 +7,93 @@ const Window = require('./Window')
 const AWS = require('aws-sdk')
 const sts = new AWS.STS()
 const fs = require('fs')
+const ddb = new AWS.DynamoDB({region: 'us-east-1'})
+const request = require('request')
 
 function main () {
+
   // todo list window
   let mainWindow = new Window({
     file: path.join('renderer', 'index.html')
   })
 
-  // add song window
-  let addSongWin
-
+  // add genre window
+  let addGenreWin
+  // add artist window
+  let addArtistWin
   // add album window
   let addAlbumWin
-
+  // add song window
+  let addSongWin
+  // genre detail window
+  let genreWin
+  // artist detail window
+  let artistWin
   // album detail window
   let albumWin
 
-  var s3 = new AWS.S3()
+  mainWindow.once('ready-to-show', () => {
 
-  var albums = []
-  
-  // Use users AWS credentials
-  var credentials = new AWS.SharedIniFileCredentials({profile: 'default'})
-  AWS.config.credentials = credentials
-  
-  // Assume s3 role
-  var params = {
-    RoleArn: 'arn:aws:iam::751454240071:role/s3user',
-    RoleSessionName: 'awssdk'
-  }
-  
-  sts.assumeRole(params, function(err, data) {
-    console.log("Assume role")
-    if (err) console.log(err); // an error occurred
-    else     console.log("Good role assume");           // successful response
-  
-    AWS.config.update({
-      accessKeyId: data.Credentials.AccessKeyId,
-      secretAccessKey: data.Credentials.SecretAccessKey,
-      sessionToken: data.Credentials.SessionToken
-    });
-  
-    // Connect to s3 with new credentials
-    s3 = new AWS.S3();
-  
-    const bucketParams = {
-      Bucket: 'cs493bucket',
-      Delimiter: '/',
-      Prefix: 'Albums/',
-    };
-  
-    // List current albums
-    s3.listObjectsV2(bucketParams , function (err, objects){
-      console.log(objects.CommonPrefixes)
-      for(var i = 0; i < objects.CommonPrefixes.length; i++){
-  
-        var name = objects.CommonPrefixes[i].Prefix
-        name = name.substring(
-          name.indexOf("/") +1,
-          name.lastIndexOf("/"),
-        )
-        mainWindow.webContents.send('album', name)
+
+    // get and list genres from API
+    request('https://oaysqwb5t8.execute-api.us-east-1.amazonaws.com/dev/genres', (error, response, body) => {
+
+      if(error){
+        console.log(error);
+      }else{
+        var genres = JSON.parse(body).Genres;
+        
+        for(var i=0; i<genres.length; i++){
+          mainWindow.send('genre', genres[i])
+        }
       }
     });
   });
+
+  // create add genre window
+  ipcMain.on('add-genre-window', () => {
+    // if addTodoWin does not already exist
+    if (!addGenreWin) {
+      addGenreWin = new Window({
+        file: path.join('renderer', 'addGenre.html'),
+        width: 400,
+        height: 400,
+        // close with the main window
+        parent: mainWindow
+      });
+
+      // cleanup
+      addGenreWin.on('closed', () => {
+        addGenreWin = null
+      });
+    }
+  });
+
+  // create add song window
+  ipcMain.on('add-artist-window', (event, genreName) => {
+    if (!addArtistWin) {
+      addArtistWin = new Window({
+        file: path.join('renderer', 'addArtist.html'),
+        width: 400,
+        height: 400,
+        // close with the main window
+        parent: genreWin
+      })
+
+      // cleanup
+      addArtistWin.on('closed', () => {
+        addArtistWin = null
+      })
+      addArtistWin.once('show', () => {
+        addArtistWin.webContents.send('genre-name', genreName)
+      })
+    }
+  })
   
   // create add song window
-  ipcMain.on('add-song-window', () => {
+  ipcMain.on('add-song-window', (event, genreName, artistName, albumName) => {
     // if addTodoWin does not already exist
     if (!addSongWin) {
-      // create a new add todo window
       addSongWin = new Window({
         file: path.join('renderer', 'add.html'),
         width: 400,
@@ -89,11 +106,16 @@ function main () {
       addSongWin.on('closed', () => {
         addSongWin = null
       })
+      addSongWin.on('show', () => {
+        addSongWin.webContents.send('genre-name', genreName)
+        addSongWin.webContents.send('artist-name', artistName)
+        addSongWin.webContents.send('album-name', albumName)
+      })
     }
   })
 
   // create add album window
-  ipcMain.on('add-album-window', () => {
+  ipcMain.on('add-album-window', (event, genreName, artistName) => {
     // if addTodoWin does not already exist
     if (!addAlbumWin) {
       // create a new add todo window
@@ -109,103 +131,212 @@ function main () {
       addAlbumWin.on('closed', () => {
         addAlbumWin = null
       })
+      addAlbumWin.once('show', () => {
+        addAlbumWin.webContents.send('genre-name', genreName)
+        addAlbumWin.webContents.send('artist-name', artistName)
+      });
     }
-  })
+  });
 
- // create add album window
- ipcMain.on('album-window', (event, albumName) => {
-  // if addAlbumWin does not already exist
+  ipcMain.on('genre-window', (event, genreName) => {
 
-  const album = albumName.substring(0, albumName.indexOf('<'))
+    if (!genreWin) {
+      // create a new album window
+      genreWin = new Window({
+        file: path.join('renderer', 'genre.html'),
+        width: 400,
+        height: 400,
+        // close with the main window
+        parent: mainWindow
+      })
+      // cleanup
+      genreWin.on('closed', () => {
+        genreWin = null
+      })
+      genreWin.once('show', () => {
+        genreWin.webContents.send('genre-name', genreName)
+        genreWin.webContents.send('refresh-artists')
+      })
+    }
+  });
 
-  if (!albumWin) {
-    // create a new album window
-    albumWin = new Window({
-      file: path.join('renderer', 'album.html'),
-      width: 400,
-      height: 400,
-      // close with the main window
-      parent: mainWindow
-    })
+  ipcMain.on('artist-window', (event, genreName, artistName) => {
 
-    const bucketParams = {
-      Bucket: 'cs493bucket',
-      Prefix: 'Albums/' + album + '/',
-    };
-  
-    
-    // List current albums
-    s3.listObjectsV2(bucketParams , function (err, objects){
-      console.log(objects)
-      for(var i = 0; i < objects.Contents.length; i++){
-        
-        var path = objects.Contents[i].Key
+    if (!artistWin) {
+      // create a new artist window
+      artistWin = new Window({
+        file: path.join('renderer', 'artist.html'),
+        width: 400,
+        height: 400,
+        // close with the main window
+        parent: genreWin
+      })
+      // cleanup
+      artistWin.on('closed', () => {
+        artistWin = null
+      })
+      artistWin.once('show', () => {
+        artistWin.webContents.send('genre-name', genreName)
+        artistWin.webContents.send('artist-name', artistName)
+        artistWin.webContents.send('refresh-albums')
+      })
+    }
+  });
 
-        if(path != 'Albums/' + album + '/'){
-          albumWin.webContents.send('add-song', path)
+  ipcMain.on('album-window', (event, genreName, artistName, albumName) => {
+
+    if (!albumWin) {
+      // create a new artist window
+      albumWin = new Window({
+        file: path.join('renderer', 'album.html'),
+        width: 400,
+        height: 400,
+        // close with the main window
+        parent: artistWin
+      })
+      // cleanup
+      albumWin.on('closed', () => {
+        albumWin = null
+      })
+      albumWin.once('show', () => {
+        albumWin.webContents.send('genre-name', genreName)
+        albumWin.webContents.send('artist-name', artistName)
+        albumWin.webContents.send('album-name', albumName)
+        //albumWin.webContents.send('refresh-songs')
+      })
+    }
+  });
+
+  // add genre
+  ipcMain.on('add-genre', (event, genre, artist) => {
+    console.log('Calling add-genre in main.js')
+
+    var params = {
+      TableName:'music',
+      Item:{
+        Genres:{
+          'S': genre
+        },
+        Artists:{
+          'S': artist
+        },
+        Albums:{
+          'L': []
+        },
+        Songs:{
+          'L': []
         }
       }
-    });
-
-    // cleanup
-    albumWin.on('closed', () => {
-      albumWin = null
+    }
+    ddb.putItem(params, (err, data) => {
+      if(err){
+        console.log(err)
+      }else{
+        console.log("genre added: " + genre)
+      }
     })
-
-    albumWin.once('show', () => {
-      albumWin.webContents.send('album-name', albumName)
-    })
-  }
- })
-
-  // add-song from add song window
-  ipcMain.on('add-song', (event, songPath) => {
-
-    console.log('Calling add-song in main.js')
-    console.log(songPath)
-    albumWin.webContents.send('song', songPath)
-
+    mainWindow.send('genre', genre)
   })
 
-  ipcMain.on('upload-song', (event, data) => {
-    
-    console.log(data)
+  // add artist
+  ipcMain.on('add-artist', (event, genre, artist) => {
+    console.log('Calling add-artist in main.js')
 
-    var songName = data.song.substring(data.song.lastIndexOf('\\')+1, data.song.length)
-    
-    const fileContent = fs.readFileSync(data.song.substring(1, data.song.length))
+    console.log(genre)
+    console.log(artist)
 
-    const params = {
-      Bucket: 'cs493bucket',
-      Key: 'Albums/' + data.album + '/' + songName,
-      Body: fileContent
+    var params = {
+      TableName:'music',
+      Item:{
+        Genres:{
+          'S': genre
+        },
+        Artists:{
+          'S': artist
+        },
+        Albums:{
+          'L': []
+        },
+        Songs:{
+          'L': []
+        },
+      }
     }
-
-
-    s3.upload(params, function(err, data){
-      if (err) console.log(err, err.stack); // an error occurred
-      else     console.log(data);           // successful response
+    ddb.putItem(params, (err, data) => {
+      if(err){
+        console.log(err)
+      }else{
+        console.log("artist added: " + artist)
+        genreWin.send('refresh-artists')
+      }
     })
   })
 
   // add album
-  ipcMain.on('add-album', (event, album) => {
+  ipcMain.on('add-album', (event, genre, artist, album) => {
+
+    var dc = new AWS.DynamoDB.DocumentClient({region: 'us-east-1'})
 
     console.log('Calling add-album in main.js')
 
-    const params = {
-      Bucket: 'cs493bucket',
-      Key: 'Albums/' + album + '/',
-      ContentLength: 0
+    console.log(genre)
+    console.log(artist)
+    console.log(album)
+    
+    var params = {
+      TableName:'music',
+      Key:{
+        "Genres": genre,
+        "Artists": artist
+      },
+      UpdateExpression: "SET Albums = list_append(Albums, :i)",
+      ExpressionAttributeValues: {
+        ':i':[album]
+      },
+      ReturnValues:"UPDATED_NEW"
     }
 
-    s3.putObject(params, function(err, data){
-      if (err) console.log(err, err.stack); // an error occurred
-      else     console.log(data);           // successful response
-    });
+    dc.update(params, (err, data) => {
+      if(err){
+        console.log(err)
+      }else{
+        console.log("album added: " + album)
+      }
+    })
+  })
 
-    mainWindow.send('album', album)
+  ipcMain.on('add-song', (event, genre, artist, album, song, songurl) => {
 
+    var dc = new AWS.DynamoDB.DocumentClient({region: 'us-east-1'})
+
+    console.log('Calling add-song in main.js')
+
+    console.log(genre)
+    console.log(artist)
+    console.log(album)
+    console.log(song)
+    console.log(songurl)
+    
+    var params = {
+      TableName:'music',
+      Key:{
+        "Genres": genre,
+        "Artists": artist
+      },
+      UpdateExpression: "SET Songs = list_append(Songs, :s)",
+      ExpressionAttributeValues: {
+        ':s':[songurl, song]
+      },
+      ReturnValues:"UPDATED_NEW"
+    }
+
+    dc.update(params, (err, data) => {
+      if(err){
+        console.log(err)
+      }else{
+        console.log("song added: " + song)
+      }
+    })
   })
 
   // delete-song from song list window

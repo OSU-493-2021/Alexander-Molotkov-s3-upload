@@ -3,7 +3,7 @@
 
   <head>
     <meta charset="UTF-8">
-    <title>Add Song</title>
+    <title>Add Artist</title>
     <link rel="stylesheet" href="../node_modules/spectre.css/dist/spectre.min.css">
     <link rel="stylesheet" href="style.css">
   </head>
@@ -12,22 +12,23 @@
     <div class="container">
       <div class="columns">
         <div class="column col-10">
-          <h1 class="text-center">Add Song</h1>
+          <h1 class="text-center">Add Artist</h1>
 
-          <form id="songForm">
+          <form id="artistForm">
             <div class="form-group">
-              <label class="form-label" for="add-input">Song</label>
-              <input class="form-input" type="file" name="add-input">
+              <h1 class="text-center" id="genreName"></h1>
+              <label class="form-label" for="add-input">Artist</label>
+              <input class="form-input" type="text" name="add-input" placeholder="Artist name">
             </div>
 
-            <button class="btn">Add Song</button>
+            <button class="btn">Add Artist</button>
           </form>
 
         </div>
       </div>
     </div>
 
-    <script src="./add.js"></script>
+    <script src="./addArtist.js"></script>
   </body>
 
 </html>
